@@ -1,6 +1,7 @@
 package net.privatevoid.blackcyan;
 
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -13,6 +14,22 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ArrayAdapter;
+import android.widget.ListAdapter;
+import android.widget.ListView;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+
+import javax.net.ssl.HttpsURLConnection;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -41,6 +58,58 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+
+
+        List<String> countries = new ArrayList<>();
+        ListView list = findViewById(R.id.mainlist);
+        ListAdapter adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, countries);
+
+        RequestAsyncTask t = new RequestAsyncTask();
+        t.execute();
+        try {
+            if (t.get().getJSONArray("response") != null) {
+                int len = t.get().getJSONArray("response").length();
+                for (int i=0;i<len;i++){
+                    countries.add(t.get().getJSONArray("response").get(i).toString());
+                }
+            }
+
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+
+        list.setAdapter(adapter);
+
+
+
+    }
+
+     class RequestAsyncTask extends AsyncTask<Void, Void, JSONObject> {
+        private JSONObject json;
+        @Override
+        protected JSONObject doInBackground(Void[] objects) {
+            try {
+                HttpsURLConnection con;
+                con = (HttpsURLConnection) (
+                        new URL("https://www.privatevoid.net/service.php?request=countries").openConnection());
+                BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                StringBuilder json = new StringBuilder();
+                String line;
+
+                while ((line = br.readLine()) != null) {
+                    json.append(line);
+                }
+                this.json = new JSONObject(json.toString());
+            } catch (IOException | JSONException e) {
+                e.printStackTrace();
+            }
+            return this.json;
+        }
     }
 
     @Override
